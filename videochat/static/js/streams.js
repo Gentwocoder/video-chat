@@ -1,7 +1,7 @@
 const APP_ID = "f4b7e55cfd524c7db7b12ac1b12b0310"
-const CHANNEL = "main"
-const TOKEN = "007eJxTYJhYF5eTaXeDU3GH2X0lo4pnk+fXycTJbylcbve07O27RwsVGNJMksxTTU2T01JMjUySzVOSzJMMjRKTDYFkkoGxoUGjclJqQyAjw5fUHhZGBggE8VkYchMz8xgYAGKZH/k="
-let UID;
+const CHANNEL = sessionStorage.getItem("room")
+const TOKEN = sessionStorage.getItem("token")
+let UID = Number(sessionStorage.getItem("UID"));
 
 const client = AgoraRTC.createClient({mode:"rtc", codec:"vp8"})
 
@@ -9,11 +9,17 @@ let localTracks = []
 let remoteUsers = {}
 
 let joinAndDisplayLocalStream = async () => {
+    document.getElementById("room-name").innerText = CHANNEL
+
     client.on("user-published", handleUserJoined)
     client.on("user-left", handleUserLeft)
 
-
-    UID = await client.join(APP_ID, CHANNEL, TOKEN, null)
+    try{
+        await client.join(APP_ID, CHANNEL, TOKEN, UID)
+    }catch(error){
+        console.error(error)
+        window.open("/", "_self")
+    }
 
     localTracks =  await AgoraRTC.createMicrophoneAndCameraTracks()
 
@@ -58,4 +64,37 @@ let handleUserLeft = async (user) => {
     document.getElementById(`user-container-${user.uid}`).remove()
 }
 
+let leaveAndRemoveLocalSTream = async () => {
+    for(let i =0; localTracks.length > i; i++){
+        localTracks[i].stop()
+        localTracks[i].close()
+    }
+    await client.leave()
+    window.open("/", "_self")
+}
+
+let toggleCamera = async (e) => {
+    if(localTracks[1].muted){
+        await localTracks[1].setMuted(false)
+        e.target.style.backgroundColor = "#fff"
+    }else{
+        await localTracks[1].setMuted(true)
+        e.target.style.backgroundColor = "rgb(255, 80, 80, 1)"
+    }
+}
+
+let toggleMic = async (e) => {
+    if(localTracks[0].muted){
+        await localTracks[0].setMuted(false)
+        e.target.style.backgroundColor = "#fff"
+    }else{
+        await localTracks[0].setMuted(true)
+        e.target.style.backgroundColor = "rgb(255, 80, 80, 1)"
+    }
+}
+
 joinAndDisplayLocalStream()
+
+document.getElementById("leave-btn").addEventListener("click", leaveAndRemoveLocalSTream)
+document.getElementById("camera-btn").addEventListener("click", toggleCamera)
+document.getElementById("mic-btn").addEventListener("click", toggleMic)
